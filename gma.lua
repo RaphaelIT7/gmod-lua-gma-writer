@@ -10,7 +10,6 @@ GMA.Addon = {
 	},
 	TimestampOffset = 5 + 8 -- Header Size + uint64_t
 }
-GMA.Queue = GMA.Queue or {}
 
 local str_b0 = string.char(0)
 function GMA.Build(output, name, description, path, files, crc, prepared)
@@ -64,7 +63,6 @@ function GMA.Build(output, name, description, path, files, crc, prepared)
 	--[[
 		.gma CRC
 	]]
-
 	if crc then
 		local origin = f:Tell()
 		f:Seek(0)
