@@ -11,6 +11,6 @@ GMA.Create("example.txt", "addons/gma", true, false, function(path)
 end)
 ```  
 
-# GMA.Create("Output file, Input folder, Async, CRC, Callback function)  
+## GMA.Create("Output file, Input folder, Async, CRC, Callback function)  
 
 NOTE: This doesn't check if any file is whitelisted or not.
