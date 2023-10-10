@@ -139,11 +139,6 @@ function GMA.FindFiles(tbl, path, ignore)
 	end
 end
 
-function GMA.AddToQueue(tbl, func)
-	tbl.func = func
-	table.insert(GMA.Queue, tbl)
-end
-
 function GMA.Create(output, input, async, crc, callback)
 	async = async or false
 	crc = crc or false
@@ -168,6 +163,94 @@ function GMA.Create(output, input, async, crc, callback)
 	end
 
 	GMA.PrePareFiles(prepare, input, files, async)
+end
+
+local function ReadUntilNull(file, steps)
+	pos = file:Tell()
+
+	local file_str = ""
+	local finished = false
+	while !finished do
+		local str = file:Read(steps)
+		local found = string.find(str, str_b0)
+		if found then
+			str = string.sub(str, 0, found)
+			finished = true
+		end
+
+		file_str = file_str .. str
+	end
+
+	file:Seek(pos + string.len(file_str))
+
+	return file_str
+end
+
+function GMA.Read(file_path, no_content, path)
+	no_content = no_content or false
+	path = path or "DATA"
+
+	local f = file.Open(file_path, "rb", path)
+
+	local tbl = {}
+
+	--[[
+		Header
+	]]
+	tbl.Indent = f:Read(string.len(GMA.Addon.Indent))
+	tbl.Version = f:ReadByte()
+	tbl.SteamID = f:ReadUInt64()
+	tbl.TimeStamp = f:ReadUInt64()
+	tbl.Required_Content = f:ReadByte()
+	tbl.Name = ReadUntilNull(f, 20)
+	tbl.Description = ReadUntilNull(f, 50)
+	tbl.Author = ReadUntilNull(f, 15)
+
+	tbl.Addon_Version = f:ReadLong()
+
+	--[[
+		File list
+	]]
+	tbl.Files = {}
+	local search = true
+	while search do
+		local file_id = f:ReadLong()
+		if file_id == 0 then
+			search = false
+			continue
+		end
+
+		tbl.Files[file_id] = {
+			Name = ReadUntilNull(f, 50),
+			Size = f:ReadUInt64(),
+			CRC = f:ReadULong(),
+		}
+	end
+
+	--[[
+		File content
+	]]
+	if !no_content then
+		for k=1, #tbl.Files do
+			local file_tbl = tbl.Files[k]
+			file_tbl.Content = f:Read(file_tbl.Size)
+		end
+	else
+		local skip = 0
+		for k=1, #tbl.Files do
+			local file_tbl = tbl.Files[k]
+			skip = skip + file_tbl.Size
+		end
+
+		f:Seek(f:Tell() + skip)
+	end
+
+	--[[
+		.gma CRC
+	]]
+	tbl.CRC = f:ReadULong()
+
+	return tbl
 end
 
 --[[
